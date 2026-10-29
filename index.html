@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Phone2PC · private sharing</title>
+<script>
+function setHue(h){h=+h;var r=document.documentElement;r.style.setProperty('--h',h);r.style.setProperty('--l',(h>=75&&h<=200?44:52)+'%');r.style.setProperty('--on',(h>=15&&h<=200)?'#2a1800':'#fff');}
+try{if(localStorage.p2p_hue)setHue(localStorage.p2p_hue)}catch(e){}
+</script>
+<style>
+:root{--h:212;--l:52%;--on:#fff;--fg:#14171c;--mut:#667085;--err:#ff453a;--glow:.2;
+--acc:hsl(var(--h) 100% var(--l));--acc2:hsl(var(--h) 100% calc(var(--l) + 12%));--acc3:hsl(var(--h) 100% calc(var(--l) - 6%));
+--g:hsl(var(--h) 80% 99%/.58);--g2:hsl(var(--h) 80% 99%/.82);--st:hsl(var(--h) 100% 84%/.8);--bg1:hsl(var(--h) 70% 97%);--bg2:hsl(var(--h) 55% 89%);
+--sh:0 10px 40px rgba(31,38,135,.14)}
+@media(prefers-color-scheme:dark){:root{--fg:#f4f5f7;--mut:#9aa3b2;--glow:.17;--g:hsl(var(--h) 24% 17%/.46);--g2:hsl(var(--h) 24% 21%/.72);--st:hsl(var(--h) 85% 72%/.26);--bg1:hsl(var(--h) 45% 10%);--bg2:hsl(var(--h) 50% 5%);--sh:0 10px 40px rgba(0,0,0,.5)}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;color:var(--fg);min-height:100vh;background:var(--bg1)}
+.bg{position:fixed;inset:0;z-index:-1;background:linear-gradient(160deg,var(--bg1),var(--bg2))}
+.glow{position:absolute;inset:0;background:radial-gradient(150px circle at var(--mx,30%) var(--my,6%),hsl(var(--h) 100% 72%/calc(var(--glow)*.7)),transparent 72%),radial-gradient(520px circle at var(--mx,30%) var(--my,6%),hsl(var(--h) 100% 58%/var(--glow)),transparent 72%),radial-gradient(760px circle at 18% -12%,hsl(var(--h) 100% 60%/calc(var(--glow)*.5)),transparent 70%)}
+main{max-width:760px;margin:0 auto;padding:20px 14px 90px}
+.glass{background:var(--g);-webkit-backdrop-filter:blur(26px) saturate(185%);backdrop-filter:blur(26px) saturate(185%);border:1px solid var(--st);box-shadow:var(--sh),inset 0 1px 0 rgba(255,255,255,.45);border-radius:24px}
+.card{padding:18px;margin-bottom:14px}.glass2{background:var(--g2);border:1px solid var(--st);border-radius:18px}
+h1{margin:0;font-size:clamp(26px,5vw,32px);letter-spacing:-.025em}h2{margin:0 0 6px;font-size:21px;letter-spacing:-.02em}p{margin:.4em 0}
+.mut{color:var(--mut);font-size:13px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{margin-left:auto}.hide{display:none!important}
+header{display:flex;justify-content:space-between;align-items:center;margin:2px 0 18px;position:relative}
+button,.btn{font:600 15px/1 inherit;font-family:inherit;border:0;border-radius:999px;padding:12px 18px;cursor:pointer;color:var(--on);background:linear-gradient(180deg,var(--acc2),var(--acc3));box-shadow:0 6px 18px hsl(var(--h) 100% 50%/.36),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .18s cubic-bezier(.3,1.4,.5,1)}
+button:active{transform:scale(.95)}button:disabled{opacity:.45;pointer-events:none}
+.ghost{color:var(--fg);background:var(--g2);border:1px solid var(--st);box-shadow:none}.danger{color:var(--err)}.sm{padding:8px 13px;font-size:13px}
+input[type=text],textarea{width:100%;font:16px inherit;font-family:inherit;color:var(--fg);padding:12px 14px;border-radius:16px;border:1px solid var(--st);background:var(--g2);outline:none}
+input:focus,textarea:focus{border-color:var(--acc);box-shadow:0 0 0 4px hsl(var(--h) 100% 52%/.22)}textarea{min-height:84px;resize:vertical}
+.chip{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--g2);border:1px solid var(--st);font-size:14px}
+.chip small{color:var(--mut)}.dot{width:8px;height:8px;border-radius:50%;background:var(--acc)}
+.item{padding:12px 14px;margin-bottom:10px}.item pre{white-space:pre-wrap;word-break:break-word;margin:6px 0 10px;font:14px/1.45 ui-monospace,Menlo,Consolas,monospace;max-height:220px;overflow:auto}
+.fn{margin:6px 0;font-weight:600;word-break:break-all}.bar{height:5px;border-radius:3px;background:rgba(128,128,128,.2);overflow:hidden;margin-bottom:10px}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc2),var(--acc3))}
+.lock{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--mut);margin-bottom:12px}
+#prompts{position:fixed;left:50%;top:14px;transform:translateX(-50%);width:min(440px,94vw);z-index:50;display:grid;gap:10px}
+.prompt{padding:16px;background:var(--g2)}.sas{font:700 20px ui-monospace,Menlo,monospace;letter-spacing:2px}
+.scrim{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(10,12,20,.35);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity .3s}
+.scrim.show{opacity:1;pointer-events:auto}.sheet{width:min(400px,100%);padding:22px;text-align:center;background:var(--g2)}
+.qr{width:200px;height:200px;border-radius:18px;background:#fff;padding:8px;margin:12px auto;image-rendering:pixelated}
+#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,90px);z-index:80;padding:11px 20px;border-radius:999px;font-weight:600;font-size:14px;transition:transform .4s cubic-bezier(.2,.9,.3,1.2)}#toast.on{transform:translate(-50%,0)}
+#sw{position:absolute;right:0;top:48px;padding:12px;display:flex;gap:9px;z-index:40}
+#sw i{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid rgba(255,255,255,.75);background:hsl(var(--c) 100% 52%);box-shadow:0 3px 8px rgba(0,0,0,.2)}
+.switchrow{display:flex;gap:8px;align-items:center;font-size:14px}
+</style></head><body>
+<div class="bg"><div class="glow"></div></div>
+<main>
+<header><div><h1>Phone2PC</h1><div class="mut">Private, device-to-device sharing</div></div>
+  <button id="themeBtn" class="ghost sm" aria-label="Theme colour">Theme</button><div id="sw" class="glass hide"></div></header>
+<noscript>This app needs JavaScript.</noscript>
+
+<section id="home">
+  <div class="glass card">
+    <h2>Share between your devices</h2>
+    <p class="mut">Files and text go straight from one device to another, end-to-end encrypted. Nothing is uploaded to a server, and nobody can see what you share unless a member of your room lets them in.</p>
+    <p class="mut" style="margin-top:14px">Your name</p><input id="nm" type="text" maxlength="24" placeholder="e.g. Dj's phone" autocomplete="off">
+    <div id="invited" class="hide" style="margin-top:14px"><p><b>You've been invited to a private room.</b></p>
+      <div class="row"><button id="ask">Ask to join</button></div></div>
+    <div id="fresh" style="margin-top:14px"><div class="row"><button id="create">Start a private room</button></div>
+      <p class="mut" style="margin-top:16px">Have an invite? Paste it here</p>
+      <div class="row" style="flex-wrap:nowrap"><input id="jl" type="text" placeholder="https://…#r=p2p-…"><button id="join" class="ghost">Join</button></div></div>
+  </div>
+</section>
+
+<section id="wait" class="hide"><div class="glass card" style="text-align:center">
+  <h2>Waiting for approval…</h2><p class="mut">Someone in the room has to let you in. You can't see anything until they do.</p>
+  <p class="mut">Security code (should match the one on their screen)</p><div id="wsas" class="sas">…</div>
+  <div class="row" style="justify-content:center;margin-top:16px"><button id="wcancel" class="ghost">Cancel</button></div></div></section>
+
+<section id="room" class="hide">
+  <div class="glass card">
+    <div class="lock">🔒 End-to-end encrypted · invite-only · newcomers see nothing until a member approves</div>
+    <div id="mem" class="row"></div>
+    <div class="row" style="margin-top:12px"><button id="invbtn" class="sm">Invite someone</button>
+      <label class="switchrow"><input id="lockchk" type="checkbox">Pause new requests</label><button id="leave" class="ghost sm danger sp">Leave</button></div>
+  </div>
+  <div class="glass card">
+    <textarea id="tx" placeholder="Type or paste text to share with the room…"></textarea>
+    <div class="row" style="margin-top:10px"><button id="sendtx" class="sm">Share text</button>
+      <label class="btn ghost sm">Share files<input id="file" type="file" multiple hidden></label>
+      <button id="savebtn" class="ghost sm hide">Choose save folder</button>
+      <label class="switchrow sp"><input id="auto" type="checkbox">Auto-download incoming files</label></div>
+  </div>
+  <div id="feed"></div>
+</section>
+</main>
+
+<div id="prompts"></div>
+<div id="inv" class="scrim"><div class="sheet glass"><h2>Invite someone</h2>
+  <p class="mut">Scan or open this link on the other device. They can only join if a member approves them.</p>
+  <img id="qr" class="qr" alt="Invite QR code"><input id="link" type="text" readonly>
+  <div class="row" style="justify-content:center;margin-top:12px"><button id="copylink" class="sm">Copy link</button><button id="sharelink" class="ghost sm hide">Share…</button><button id="invclose" class="ghost sm">Close</button></div></div></div>
+<div id="toast" class="glass"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+/* ===== settings you may edit =====
+   ICE: add a TURN server here if devices on different networks can't connect (strict NAT / mobile data).
+   PEER_OPTS: point at your own PeerJS server to avoid the free public one (it only brokers connections, never sees your data). */
+const ICE=[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}];
+const PEER_OPTS={config:{iceServers:ICE}};
+
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)),enc=new TextEncoder(),CH=32768;
+const rnd=n=>[...crypto.getRandomValues(new Uint8Array(n))].map(b=>b.toString(16).padStart(2,'0')).join('');
+const clean=s=>String(s==null?'':s).replace(/[\u0000-\u001f<>]/g,'').slice(0,80);
+const fmt=b=>b>=1e9?(b/1e9).toFixed(2)+' GB':b>=1e6?(b/1e6).toFixed(1)+' MB':b>=1e3?Math.round(b/1e3)+' KB':b+' B';
+const me={pid:'p2p-'+rnd(16),name:''};
+let peer,key=null,joinSt=null,locked=false,auto=false,saveDir=null,rseq=0,busy=0,wl=null,booted=false;
+const members=new Map(),pend=new Map(),log=[],files=new Map(),dls=new Map();
+window.__p2p={members,log,pend,me,get key(){return key}};   // handy for debugging
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2400);}
+function show(v){['home','wait','room'].forEach(x=>$('#'+x).classList.toggle('hide',x!==v));}
+async function copy(t){try{await navigator.clipboard.writeText(t);}catch(e){const a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';document.body.append(a);a.select();try{document.execCommand('copy')}catch(_){}a.remove();}toast('Copied');}
+
+/* ---------- crypto: membership proof + security code ---------- */
+const h2b=h=>new Uint8Array(h.match(/../g).map(x=>parseInt(x,16)));
+async function hmac(k,msg){const ck=await crypto.subtle.importKey('raw',h2b(k),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  return [...new Uint8Array(await crypto.subtle.sign('HMAC',ck,enc.encode(msg)))].map(b=>b.toString(16).padStart(2,'0')).join('');}
+const fp=s=>((s||'').match(/a=fingerprint:\S+ (\S+)/)||[])[1]||'';
+async function sas(c){const pc=c.peerConnection;if(!pc)return'';const a=fp(pc.localDescription&&pc.localDescription.sdp),b=fp(pc.remoteDescription&&pc.remoteDescription.sdp);
+  const d=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode([a,b].sort().join('|'))));
+  const n=String(((d[0]<<16)|(d[1]<<8)|d[2])%1000000).padStart(6,'0');return n.slice(0,3)+' '+n.slice(3);}
+
+/* ---------- connections ---------- */
+const tx=(c,m)=>{try{c.open&&c.send(JSON.stringify(m))}catch(e){}};
+const bcast=m=>members.forEach(s=>tx(s.c,m));
+function setup(c){const st={c,ok:false,nonce:rnd(8),name:'?'};
+  c.on('open',()=>tx(c,{t:'hello',name:me.name,nonce:st.nonce,key:!!key}));
+  c.on('data',d=>rx(st,d));c.on('close',()=>gone(st));c.on('error',()=>gone(st));return st;}
+function gone(st){if(st.gone)return;st.gone=true;
+  if(members.get(st.c.peer)===st){members.delete(st.c.peer);toast(st.name+' left');}
+  if(st.rid&&pend.has(st.rid)){pend.delete(st.rid);closePrompt(st.rid);bcast({t:'closed',id:st.rid});}
+  if(st===joinSt&&!key){toast('The invite closed');show('home');}
+  drawMembers();draw();}
+function ok(st){st.ok=true;members.set(st.c.peer,st);sas(st.c).then(s=>{st.sas=s;drawMembers();});drawMembers();draw();}
+
+async function rx(st,d){
+  if(typeof d!=='string'){if(st.ok)bin(st,d);return;}           // binary only from verified members
+  let m;try{m=JSON.parse(d)}catch(e){return}
+  if(st.ok)return mem(st,m);
+  const c=st.c;
+  if(m.t==='hello'){st.name=clean(m.name)||'Device';
+    if(key&&m.key)tx(c,{t:'proof',h:await hmac(key,`${m.nonce}|${me.pid}|${c.peer}`)});   // both sides already hold the room key
+    else if(key&&!m.key){if(locked){tx(c,{t:'deny'});setTimeout(()=>c.close(),300);}else newcomer(st);}  // a newcomer: sees nothing until approved
+  }else if(m.t==='proof'&&key){if(m.h===await hmac(key,`${st.nonce}|${c.peer}|${me.pid}`))ok(st);else c.close();}
+  else if(m.t==='wait'&&st===joinSt){$('#wsas').textContent=await sas(c);}
+  else if(m.t==='deny'&&st===joinSt){st.gone=true;toast('Your request was declined');show('home');try{c.close()}catch(e){}}
+  else if(m.t==='admit'&&st===joinSt&&!key&&typeof m.key==='string'&&/^[0-9a-f]{64}$/.test(m.key)){
+    key=m.key;(m.log||[]).slice().reverse().forEach(i=>addItem(i));ok(st);show('room');toast('You joined the room');
+    for(const r of (m.roster||[]))if(r.pid&&r.pid!==c.peer&&r.pid!==me.pid&&/^p2p-[0-9a-f]{32}$/.test(r.pid))setup(peer.connect(r.pid,{serialization:'raw',reliable:true}));}
+}
+async function newcomer(st){const id=rnd(6);st.rid=id;pend.set(id,st);tx(st.c,{t:'wait'});st.sas=await sas(st.c);
+  prompt({id,name:st.name,sas:st.sas});bcast({t:'req',id,name:st.name});}
+function finalize(id,yes,hist){const st=pend.get(id);if(!st)return;pend.delete(id);closePrompt(id);bcast({t:'closed',id});
+  if(!yes){tx(st.c,{t:'deny'});setTimeout(()=>{try{st.c.close()}catch(e){}},300);return;}
+  tx(st.c,{t:'admit',key,roster:[{pid:me.pid,name:me.name},...[...members.values()].map(s=>({pid:s.c.peer,name:s.name}))],log:hist?log:[]});ok(st);toast(st.name+' joined');}
+function decide(id,yes,hist,via){if(pend.has(id))return finalize(id,yes,hist);const s=members.get(via);if(s)tx(s.c,{t:'dec',id,ok:yes,hist});closePrompt(id);}
+function mem(st,m){const c=st.c;
+  if(m.t==='req')prompt({id:clean(m.id),name:clean(m.name),via:st.name,viaPid:c.peer});
+  else if(m.t==='dec'){if(pend.has(m.id))finalize(m.id,!!m.ok,!!m.hist);}
+  else if(m.t==='closed')closePrompt(m.id);
+  else if(m.t==='item'&&m.item)addItem(m.item,c.peer);
+  else if(m.t==='rm')rmItem(m.id,c.peer);
+  else if(m.t==='get')serve(c,m);
+  else if(m.t==='fs')dlStart(st,m);
+  else if(m.t==='fe')dlEnd(st,m.rid);}
+
+/* ---------- join requests (any member can approve) ---------- */
+function prompt(o){if($('#pr-'+o.id))return;const el=document.createElement('div');el.className='prompt glass';el.id='pr-'+o.id;
+  el.innerHTML=`<b>${esc(o.name)}</b> wants to join${o.via?` <span class="mut">(invited via ${esc(o.via)})</span>`:''}`+
+   (o.sas?`<p class="mut">Security code <span class="sas">${o.sas}</span><br>Ask them to read theirs aloud. If it differs, deny.</p>`:'<p class="mut">Any member can allow or deny. Until then they see nothing.</p>')+
+   `<div class="row"><button class="sm" data-d="1h">Allow + show history</button><button class="ghost sm" data-d="1n">Allow, new shares only</button><button class="ghost sm danger" data-d="0">Deny</button></div>`;
+  el.onclick=e=>{const d=e.target.dataset.d;if(d)decide(o.id,d[0]==='1',d==='1h',o.viaPid);};$('#prompts').append(el);}
+const closePrompt=id=>{const e=$('#pr-'+id);if(e)e.remove();};
+
+/* ---------- shared items ---------- */
+function addItem(i,from){const it={id:String(i.id).slice(0,16),kind:i.kind==='file'?'file':'text',from:from||String(i.from||'').slice(0,40),fromName:clean(i.fromName),
+  ts:+i.ts||Date.now(),text:String(i.text||'').slice(0,100000),name:clean(i.name),size:Math.max(0,+i.size||0)};
+  if(from&&members.get(from))it.fromName=members.get(from).name;if(log.some(x=>x.id===it.id))return;log.unshift(it);draw();
+  if(auto&&it.kind==='file'&&it.from!==me.pid&&from)want(it);}
+function rmItem(id,from){const i=log.findIndex(x=>x.id===id&&x.from===from);if(i>=0){log.splice(i,1);draw();}}
+function share(i,file){i.id=rnd(6);i.from=me.pid;i.fromName=me.name;i.ts=Date.now();if(file)files.set(i.id,file);addItem(i);bcast({t:'item',item:i});}
+function drawMembers(){$('#mem').innerHTML=`<span class="chip"><i class="dot"></i>${esc(me.name)} <small>you</small></span>`+
+  [...members.values()].map(s=>`<span class="chip" title="Security code for this connection"><i class="dot"></i>${esc(s.name)}${s.sas?` <small>code ${s.sas}</small>`:''}</span>`).join('');}
+function draw(){const t=x=>new Date(x).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  $('#feed').innerHTML=log.length?log.map(it=>{const mine=it.from===me.pid,on=mine||members.has(it.from);
+    const body=it.kind==='text'?`<pre>${esc(it.text)}</pre>`:`<div class="fn">${esc(it.name)} <span class="mut">${fmt(it.size)}</span></div><div class="bar"><i id="pg-${it.id}" style="width:${it.pct||0}%"></i></div>`;
+    const acts=(it.kind==='text'?`<button class="sm" data-a="copy" data-i="${it.id}">Copy</button>`:(mine?'':`<button class="sm" data-a="get" data-i="${it.id}" ${on?'':'disabled'}>${on?'Download':'Owner offline'}</button>`))+
+      (mine?`<button class="ghost sm danger" data-a="rm" data-i="${it.id}">Stop sharing</button>`:'');
+    return`<div class="item glass2"><div class="mut">${mine?'You':esc(it.fromName||'?')} · ${t(it.ts)}</div>${body}<div class="row">${acts}</div></div>`;}).join('')
+    :'<p class="mut" style="text-align:center">Nothing shared yet.</p>';}
+$('#feed').onclick=e=>{const b=e.target.closest('[data-a]');if(!b)return;const it=log.find(x=>x.id===b.dataset.i);if(!it)return;
+  if(b.dataset.a==='copy')copy(it.text);else if(b.dataset.a==='get')want(it);
+  else if(b.dataset.a==='rm'){files.delete(it.id);rmItem(it.id,me.pid);bcast({t:'rm',id:it.id});}};
+
+/* ---------- file transfer: direct, chunked, several at once ---------- */
+function busyChange(d){busy=Math.max(0,busy+d);if(busy&&!wl&&navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>wl=l).catch(()=>{});if(!busy&&wl){try{wl.release()}catch(e){}wl=null;}}
+function want(it){const s=members.get(it.from);if(!s)return toast('The owner is offline');tx(s.c,{t:'get',id:it.id,rid:++rseq});toast('Requesting '+it.name+'…');}
+async function serve(c,m){const f=files.get(m.id);if(!f||!c.open)return;busyChange(1);const dc=c.dataChannel;
+  tx(c,{t:'fs',rid:m.rid,id:m.id,name:f.name,size:f.size});
+  try{for(let o=0;o<f.size;o+=CH){const b=await f.slice(o,o+CH).arrayBuffer();while(dc.bufferedAmount>4e6){if(!c.open)throw 0;await sleep(15);}
+    const fr=new Uint8Array(4+b.byteLength);new DataView(fr.buffer).setUint32(0,m.rid);fr.set(new Uint8Array(b),4);c.send(fr.buffer);}
+    tx(c,{t:'fe',rid:m.rid});}catch(e){}busyChange(-1);}
+function dlStart(st,m){const d={name:clean(m.name)||'file',size:+m.size||0,got:0,parts:[],it:log.find(x=>x.id===m.id)};dls.set(st.c.peer+':'+m.rid,d);busyChange(1);
+  d.q=(async()=>{if(!saveDir)return;try{let n=d.name;for(let i=1;;i++){try{await saveDir.getFileHandle(n)}catch(e){break}n=d.name.replace(/(\.[^.]*)?$/,` (${i})$1`);}
+    d.fn=n;d.w=await(await saveDir.getFileHandle(n,{create:true})).createWritable();}catch(e){d.w=null}})();}
+function bin(st,ab){const d=dls.get(st.c.peer+':'+new DataView(ab).getUint32(0));if(!d)return;const ch=ab.slice(4);d.got+=ch.byteLength;
+  d.q=d.q.then(()=>d.w?d.w.write(ch):d.parts.push(ch));const p=d.size?Math.floor(d.got/d.size*100):100;
+  if(d.it){d.it.pct=p;const e=$('#pg-'+d.it.id);if(e)e.style.width=p+'%';}}
+function dlEnd(st,rid){const k=st.c.peer+':'+rid,d=dls.get(k);if(!d)return;dls.delete(k);
+  d.q=d.q.then(async()=>{if(d.w){await d.w.close();toast('Saved '+d.fn);}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(d.parts));a.download=d.name;
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),6e4);toast('Downloaded '+d.name);}busyChange(-1);});}
+
+/* ---------- start / join / leave ---------- */
+function boot(cb){me.name=clean($('#nm').value)||clean(localStorage.p2p_name)||(/Mobi|Android|iPhone/.test(navigator.userAgent)?'Phone ':'PC ')+Math.floor(100+Math.random()*900);
+  try{localStorage.p2p_name=me.name}catch(e){}
+  peer=new Peer(me.pid,PEER_OPTS);peer.on('open',()=>{if(booted)return;booted=true;cb();});peer.on('connection',c=>setup(c));
+  peer.on('error',e=>{if(e.type==='peer-unavailable'){toast('That invite is offline or expired');show('home');}else toast('Connection problem ('+e.type+')');});}
+const rid=s=>((s||'').match(/p2p-[0-9a-f]{32}/)||[])[0];
+function join(r){boot(()=>{joinSt=setup(peer.connect(r,{serialization:'raw',reliable:true}));show('wait');});}
+$('#create').onclick=()=>boot(()=>{key=rnd(32);show('room');drawMembers();draw();});
+$('#join').onclick=()=>{const r=rid($('#jl').value);r?join(r):toast('Paste the full invite link');};
+$('#ask').onclick=()=>join(rid(location.hash));
+$('#wcancel').onclick=$('#leave').onclick=()=>{try{peer.destroy()}catch(e){}history.replaceState(null,'',location.pathname);location.reload();};
+$('#lockchk').onchange=e=>{locked=e.target.checked;toast(locked?'New requests paused':'New requests allowed');};
+$('#auto').onchange=e=>{auto=e.target.checked;};
+if(rid(location.hash)){$('#invited').classList.remove('hide');$('#fresh').classList.add('hide');}
+$('#nm').value=(()=>{try{return localStorage.p2p_name||''}catch(e){return''}})();
+
+/* ---------- share UI ---------- */
+$('#sendtx').onclick=()=>{const v=$('#tx').value;if(!v.trim())return;share({kind:'text',text:v});$('#tx').value='';};
+$('#file').onchange=e=>{for(const f of e.target.files)share({kind:'file',name:f.name,size:f.size},f);e.target.value='';};
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{e.preventDefault();if(!$('#room').classList.contains('hide'))for(const f of e.dataTransfer.files)share({kind:'file',name:f.name,size:f.size},f);});
+if(window.showDirectoryPicker)$('#savebtn').classList.remove('hide');
+$('#savebtn').onclick=async()=>{try{saveDir=await showDirectoryPicker({mode:'readwrite'});toast('Saving to '+saveDir.name);}catch(e){}};
+$('#invbtn').onclick=()=>{const url=location.href.split('#')[0]+'#r='+me.pid;$('#link').value=url;
+  try{const q=qrcode(0,'M');q.addData(url);q.make();$('#qr').src=q.createDataURL(6,2);}catch(e){}$('#inv').classList.add('show');};
+$('#invclose').onclick=()=>$('#inv').classList.remove('show');$('#inv').onclick=e=>{if(e.target.id==='inv')$('#inv').classList.remove('show');};
+$('#copylink').onclick=()=>copy($('#link').value);
+if(navigator.share){$('#sharelink').classList.remove('hide');$('#sharelink').onclick=()=>navigator.share({title:'Join my private room',url:$('#link').value}).catch(()=>{});}
+
+/* ---------- theme + cursor spotlight (low opacity) ---------- */
+$('#sw').innerHTML=[212,176,142,38,20,355,328,268].map(h=>`<i style="--c:${h}" data-h="${h}" title="Theme ${h}"></i>`).join('');
+$('#themeBtn').onclick=()=>$('#sw').classList.toggle('hide');
+$('#sw').onclick=e=>{const h=e.target.dataset.h;if(h){setHue(h);try{localStorage.p2p_hue=h}catch(_){}}};
+(()=>{const r=document.documentElement;let f=0,x=0,y=0;
+  const up=()=>{f=0;r.style.setProperty('--mx',x+'px');r.style.setProperty('--my',y+'px');};
+  addEventListener('pointermove',e=>{x=e.clientX;y=e.clientY;if(!f)f=requestAnimationFrame(up);},{passive:true});})();
+</script></body></html>
